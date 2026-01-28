@@ -24,10 +24,11 @@ jobs:
           MODEL_NAME: churn-model
           MODEL_VERSION: ${{ github.event.inputs.model_version }}
         run: |
-          python - << 'PY'
+          python << 'PY'
           import os, mlflow
           from mlflow.tracking import MlflowClient
           
+          # Connexion au serveur distant
           mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
           token = os.environ["MLFLOW_TRACKING_TOKEN"]
           os.environ["MLFLOW_TRACKING_USERNAME"] = token
@@ -37,7 +38,7 @@ jobs:
           name = os.environ["MODEL_NAME"]
           version = os.environ["MODEL_VERSION"]
           
-          # Transition vers Production et archivage des anciennes versions
+          # Transition vers Production et archivage automatique des anciennes versions
           client.transition_model_version_stage(
               name=name,
               version=version,
