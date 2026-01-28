@@ -13,16 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       result_json: ${{ steps.train.outputs.result_json }}
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install ML deps
-        run: |
-          pip install -r ml/requirements.txt
-      - name: Train + register in MLflow
+
+      - name: Install ML dependencies
+        run: pip install -r ml/requirements.txt
+
+      - name: Train + Register model in MLflow
         id: train
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.DAGSHUB_MLFLOW_TRACKING_URI }}
@@ -32,7 +35,8 @@ jobs:
         run: |
           python ml/train_and_register.py | tee train_out.json
           echo "result_json=$(cat train_out.json)" >> "$GITHUB_OUTPUT"
-      - name: Evaluate gate
+
+      - name: Apply Quality Gate
         env:
           ACCURACY_THRESHOLD: "0.90"
         run: |
@@ -41,24 +45,33 @@ jobs:
   deploy_staging:
     needs: train_register
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
-      - name: Build + push backend image (staging)
+
+      - name: Login to DockerHub
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+      - name: Build & Push Backend Image (Staging)
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        run: |
           docker build -t "$DOCKERHUB_USERNAME/churn-backend:staging" backend
           docker push "$DOCKERHUB_USERNAME/churn-backend:staging"
-      - name: Deploy to staging (local-compose example)
+
+      - name: Deploy to Staging (placeholder)
         run: |
-          echo "Deploy step placeholder: run docker-compose on staging host."
+          echo "Here you would SSH to staging server and run docker-compose pull/up"
 
   staging_smoke_test:
     needs: deploy_staging
     runs-on: ubuntu-latest
+
     steps:
-      - name: Smoke test placeholder
+      - name: Smoke Test Placeholder
         run: |
-          echo "In real life, curl staging /health and /predict here."
+          echo "In real setup: curl staging /health and /predict"

@@ -12,7 +12,7 @@ def health():
 @app.post("/predict")
 def predict():
     payload = request.get_json(force=True)
-    X = payload ["features"]
+    X = payload["features"]
     preds = model.predict(X)
     return jsonify({"predictions": preds.tolist()})
 
