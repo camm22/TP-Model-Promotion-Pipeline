@@ -42,26 +42,36 @@ jobs:
         run: |
           echo '${{ steps.train.outputs.result_json }}' | python ml/evaluate.py
 
-      - name: Promote model to Staging in MLflow
+      - name: Promote model to Staging
         env:
           MLFLOW_TRACKING_URI: ${{ secrets.DAGSHUB_MLFLOW_TRACKING_URI }}
           MLFLOW_TRACKING_TOKEN: ${{ secrets.DAGSHUB_TOKEN }}
+          MLFLOW_TRACKING_USERNAME: ${{ secrets.DAGSHUB_TOKEN }}
+          MLFLOW_TRACKING_PASSWORD: ${{ secrets.DAGSHUB_TOKEN }}
+          MODEL_NAME: churn-model
         run: |
           python - << 'PY'
-          import mlflow, json
+          import json
+          import mlflow
+          from mlflow.tracking import MlflowClient
+          import os
 
-          result = json.loads('''${{ steps.train.outputs.result_json }}''')
+          result = json.loads("""${{ steps.train.outputs.result_json }}""")
           model_version = result["model_version"]
 
-          client = mlflow.tracking.MlflowClient()
+          mlflow.set_tracking_uri(os.environ["MLFLOW_TRACKING_URI"])
+
+          client = MlflowClient()
           client.transition_model_version_stage(
-              name="churn-model",
+              name=os.environ["MODEL_NAME"],
               version=model_version,
-              stage="Staging"
+              stage="Staging",
+              archive_existing_versions=True
           )
 
-          print(f"✅ Model version {model_version} promoted to STAGING")
+          print(f"Model version {model_version} promoted to Staging")
           PY
+
 
   deploy_staging:
     needs: train_register
